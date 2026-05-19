@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git remote *)",
+      "Bash(git push *)",
+      "Read(//Users/levbelinkov/.ssh/**)",
+      "Bash(ssh-keygen -t ed25519 -C \"levan90@mail.ru\" -f ~/.ssh/id_ed25519_motaur -N \"\")",
+      "Bash(chmod 600 ~/.ssh/config)",
+      "Bash(git config *)",
+      "Bash(echo \"name: $\\(git config user.name\\)\")",
+      "Bash(echo \"email: $\\(git config user.email\\)\")",
+      "Bash(git commit *)",
+      "Bash(ssh -o StrictHostKeyChecking=accept-new -T git@github.com-motaur)",
+      "Bash(ssh -v -T git@github.com-motaur)",
+      "Bash(gh auth *)",
+      "Bash(flutter pub *)",
+      "Bash(flutter analyze *)",
+      "Bash(flutter build *)",
+      "Bash(flutter test *)",
+      "Bash(flutter devices *)"
+    ]
+  }
+}
