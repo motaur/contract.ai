@@ -14,6 +14,10 @@ concurrency:
   group: pages
   cancel-in-progress: true
 
+defaults:
+  run:
+    working-directory: contract_analyzer
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -33,7 +37,7 @@ jobs:
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: build/web
+          path: contract_analyzer/build/web
 
   deploy:
     needs: build
