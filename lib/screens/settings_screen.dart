@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../services/prefs.dart';
 import '../theme/theme_controller.dart';
 import '../theme/tokens.dart';
 import '../widgets/app_icons.dart';
@@ -71,6 +73,10 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ),
             ]),
+
+            const SizedBox(height: 18),
+            _SectionLabel(text: 'AI'),
+            _GeminiApiSection(),
 
             const SizedBox(height: 18),
             _SectionLabel(text: 'Preferences'),
@@ -241,6 +247,119 @@ class _PlanCard extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GeminiApiSection extends StatefulWidget {
+  @override
+  State<_GeminiApiSection> createState() => _GeminiApiSectionState();
+}
+
+class _GeminiApiSectionState extends State<_GeminiApiSection> {
+  final _ctrl = TextEditingController();
+  bool _obscure = true;
+  bool _justSaved = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Prefs.getGeminiApiKey().then((key) {
+      if (key != null && mounted) setState(() => _ctrl.text = key);
+    });
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    await Prefs.setGeminiApiKey(_ctrl.text.trim());
+    if (!mounted) return;
+    setState(() => _justSaved = true);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('API key saved'), duration: Duration(seconds: 2)),
+    );
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _justSaved = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Tokens.of(context);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+      decoration: BoxDecoration(
+        color: t.card,
+        border: Border.all(color: t.hair),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Gemini API key',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: t.ink),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _ctrl,
+                  obscureText: _obscure,
+                  style: TextStyle(fontSize: 13, color: t.ink, fontFamily: 'monospace'),
+                  decoration: InputDecoration(
+                    hintText: 'AIza••••••••••••••••••••••••••••',
+                    hintStyle: TextStyle(fontSize: 13, color: t.muted),
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+              ),
+              GestureDetector(
+                onTap: () => setState(() => _obscure = !_obscure),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Icon(
+                    _obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    size: 18,
+                    color: t.muted,
+                  ),
+                ),
+              ),
+              FilledButton(
+                onPressed: _save,
+                style: FilledButton.styleFrom(
+                  backgroundColor: _justSaved ? const Color(0xFF22C55E) : t.accent,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: Text(_justSaved ? 'Saved ✓' : 'Save'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          GestureDetector(
+            onTap: () => launchUrl(
+              Uri.parse('https://aistudio.google.com/apikey'),
+              mode: LaunchMode.externalApplication,
+            ),
+            child: Text(
+              'Get a free Gemini API key →',
+              style: TextStyle(fontSize: 12, color: t.accent, fontWeight: FontWeight.w500),
+            ),
           ),
         ],
       ),
