@@ -47,7 +47,10 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             // Hero CTA
-            _HeroCard(onTap: () => UploadSheet.show(context)),
+            _HeroCard(onTap: () async {
+              final go = await UploadSheet.show(context);
+              if (go && context.mounted) context.go('/analyzing');
+            }),
             const SizedBox(height: 20),
             // Stats
             Row(

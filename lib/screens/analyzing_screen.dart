@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
+import '../controllers/analysis_controller.dart';
 import '../theme/tokens.dart';
 import '../widgets/app_icons.dart';
 
@@ -22,6 +24,9 @@ class _AnalyzingScreenState extends State<AnalyzingScreen>
   ];
 
   int _stage = 0;
+  bool _navigated = false;
+  String? _error;
+  late final AnalysisController _ctrl;
   late final AnimationController _scan;
   late final AnimationController _pulse;
   final _timers = <Timer>[];
@@ -29,6 +34,9 @@ class _AnalyzingScreenState extends State<AnalyzingScreen>
   @override
   void initState() {
     super.initState();
+    _ctrl = context.read<AnalysisController>();
+    _ctrl.addListener(_onCtrlChange);
+
     _scan = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1400),
@@ -39,13 +47,25 @@ class _AnalyzingScreenState extends State<AnalyzingScreen>
     )..repeat(reverse: true);
 
     _timers.addAll([
-      Timer(const Duration(milliseconds: 900), () => _setStage(1)),
-      Timer(const Duration(milliseconds: 2000), () => _setStage(2)),
-      Timer(const Duration(milliseconds: 3000), () => _setStage(3)),
-      Timer(const Duration(milliseconds: 3800), () {
-        if (mounted) context.go('/results');
-      }),
+      Timer(const Duration(milliseconds: 1200), () => _setStage(1)),
+      Timer(const Duration(milliseconds: 2800), () => _setStage(2)),
     ]);
+
+    // In case analysis already completed before this screen mounted
+    WidgetsBinding.instance.addPostFrameCallback((_) => _onCtrlChange());
+  }
+
+  void _onCtrlChange() {
+    if (_ctrl.status == AnalysisStatus.done && !_navigated) {
+      _navigated = true;
+      if (mounted) context.go('/results');
+    } else if (_ctrl.status == AnalysisStatus.error && _error == null) {
+      if (mounted) setState(() => _error = _ctrl.error);
+    } else if (_ctrl.status == AnalysisStatus.idle && !_navigated && _error == null) {
+      if (mounted) {
+        setState(() => _error = 'No analysis started. Please upload a contract first.');
+      }
+    }
   }
 
   void _setStage(int s) {
@@ -55,6 +75,7 @@ class _AnalyzingScreenState extends State<AnalyzingScreen>
 
   @override
   void dispose() {
+    _ctrl.removeListener(_onCtrlChange);
     for (final t in _timers) {
       t.cancel();
     }
@@ -66,6 +87,11 @@ class _AnalyzingScreenState extends State<AnalyzingScreen>
   @override
   Widget build(BuildContext context) {
     final t = Tokens.of(context);
+
+    if (_error != null) {
+      return _ErrorView(t: t, error: _error!);
+    }
+
     return DecoratedBox(
       decoration: BoxDecoration(
         gradient: RadialGradient(
@@ -114,7 +140,10 @@ class _AnalyzingScreenState extends State<AnalyzingScreen>
                   )),
               const Spacer(),
               TextButton(
-                onPressed: () => context.go('/home'),
+                onPressed: () {
+                  _ctrl.reset();
+                  context.go('/home');
+                },
                 child: Text(
                   'Cancel',
                   style: TextStyle(
@@ -125,6 +154,76 @@ class _AnalyzingScreenState extends State<AnalyzingScreen>
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ErrorView extends StatelessWidget {
+  final Tokens t;
+  final String error;
+  const _ErrorView({required this.t, required this.error});
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: t.bg,
+      child: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: t.redSoft,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(Icons.error_outline, size: 36, color: t.red),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Analysis failed',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: t.ink,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  error,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: t.muted, height: 1.5),
+                ),
+                const SizedBox(height: 32),
+                Material(
+                  color: t.accent,
+                  borderRadius: BorderRadius.circular(12),
+                  child: InkWell(
+                    onTap: () => context.go('/home'),
+                    borderRadius: BorderRadius.circular(12),
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 28, vertical: 13),
+                      child: Text(
+                        'Go back',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

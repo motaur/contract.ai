@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../controllers/analysis_controller.dart';
 import '../data/mock_issues.dart';
 import '../models/issue.dart';
 import '../theme/theme_controller.dart';
@@ -23,17 +24,35 @@ class _ResultsScreenState extends State<ResultsScreen> {
   Widget build(BuildContext context) {
     final t = Tokens.of(context);
     final sevStyle = context.watch<ThemeController>().sevStyle;
+    final ctrl = context.watch<AnalysisController>();
+    final allIssues =
+        ctrl.status == AnalysisStatus.done ? ctrl.issues : mockIssues;
     final filtered = _filter == null
-        ? mockIssues
-        : mockIssues.where((i) => i.sev == _filter).toList();
-    final cntR = mockIssues.where((i) => i.sev == SevKind.red).length;
-    final cntA = mockIssues.where((i) => i.sev == SevKind.amber).length;
-    final cntB = mockIssues.where((i) => i.sev == SevKind.blue).length;
+        ? allIssues
+        : allIssues.where((i) => i.sev == _filter).toList();
+    final cntR = allIssues.where((i) => i.sev == SevKind.red).length;
+    final cntA = allIssues.where((i) => i.sev == SevKind.amber).length;
+    final cntB = allIssues.where((i) => i.sev == SevKind.blue).length;
+    final summary = ctrl.status == AnalysisStatus.done
+        ? ctrl.summary
+        : 'Mostly fair, with 3 things to push back on. The auto-renewal and repair threshold stand out — both negotiable.';
+    final docName = ctrl.status == AnalysisStatus.done
+        ? ctrl.fileName
+        : 'Apartment lease — 235 Bowery';
+    final secs = ctrl.status == AnalysisStatus.done ? ctrl.durationSecs : 18;
 
     return Column(
       children: [
-        _Header(t: t, cntR: cntR, cntA: cntA, cntB: cntB,
-            filter: _filter, onFilter: (v) => setState(() => _filter = v)),
+        _Header(
+            t: t,
+            cntR: cntR,
+            cntA: cntA,
+            cntB: cntB,
+            filter: _filter,
+            summary: summary,
+            docName: docName,
+            durationSecs: secs,
+            onFilter: (v) => setState(() => _filter = v)),
         Expanded(
           child: ListView.separated(
             padding: const EdgeInsets.fromLTRB(20, 14, 20, 40),
@@ -57,6 +76,9 @@ class _Header extends StatelessWidget {
   final int cntA;
   final int cntB;
   final SevKind? filter;
+  final String summary;
+  final String docName;
+  final int durationSecs;
   final ValueChanged<SevKind?> onFilter;
   const _Header({
     required this.t,
@@ -64,6 +86,9 @@ class _Header extends StatelessWidget {
     required this.cntA,
     required this.cntB,
     required this.filter,
+    required this.summary,
+    required this.docName,
+    required this.durationSecs,
     required this.onFilter,
   });
 
@@ -121,7 +146,7 @@ class _Header extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Apartment lease — 235 Bowery',
+                      docName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -133,7 +158,7 @@ class _Header extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '14 pages · Reviewed in 18s',
+                      'Reviewed in ${durationSecs}s',
                       style: TextStyle(fontSize: 12, color: t.muted),
                     ),
                   ],
@@ -166,14 +191,10 @@ class _Header extends StatelessWidget {
                         color: t.accentDeep,
                         fontFamily: 'Ploni',
                       ),
-                      children: const [
+                      children: [
                         TextSpan(
-                          text: 'Mostly fair, with 3 things to push back on.',
-                          style: TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                        TextSpan(
-                          text:
-                              ' The auto-renewal and repair threshold stand out — both negotiable.',
+                          text: summary,
+                          style: const TextStyle(fontWeight: FontWeight.w500),
                         ),
                       ],
                     ),
@@ -188,7 +209,7 @@ class _Header extends StatelessWidget {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                _Chip(label: 'All ${mockIssues.length}', on: filter == null, onTap: () => onFilter(null)),
+                _Chip(label: 'All ${cntR + cntA + cntB}', on: filter == null, onTap: () => onFilter(null)),
                 const SizedBox(width: 6),
                 _Chip(label: 'Red flags $cntR', on: filter == SevKind.red, dot: SevKind.red, onTap: () => onFilter(SevKind.red)),
                 const SizedBox(width: 6),
