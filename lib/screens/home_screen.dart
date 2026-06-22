@@ -1,102 +1,161 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
-import '../data/mock_recents.dart';
+import '../controllers/analysis_controller.dart';
+import '../models/history_entry.dart';
+import '../models/recent.dart';
+import '../services/prefs.dart';
 import '../theme/tokens.dart';
 import '../widgets/app_icons.dart';
 import '../widgets/recent_row.dart';
 import 'upload_sheet.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  late Future<List<HistoryEntry>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = Prefs.loadHistory();
+  }
 
   @override
   Widget build(BuildContext context) {
     final t = Tokens.of(context);
     return SafeArea(
       bottom: false,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 110),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Greeting
-            Row(
+      child: FutureBuilder<List<HistoryEntry>>(
+        future: _future,
+        builder: (context, snap) {
+          final history = snap.data ?? [];
+          final recents = history.take(3).toList();
+          final totalRed = history.fold(0, (s, e) => s + e.red);
+          final totalAmber = history.fold(0, (s, e) => s + e.amber);
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 110),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Tuesday · May 19',
-                          style: TextStyle(fontSize: 14, color: t.muted)),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Hi, Sarah',
+                // Greeting
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Tuesday · May 19',
+                              style: TextStyle(fontSize: 14, color: t.muted)),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Hi, Sarah',
+                            style: TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.6,
+                              color: t.ink,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    _AvatarBtn(onTap: () => context.go('/settings')),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                // Hero CTA
+                _HeroCard(onTap: () async {
+                  final go = await UploadSheet.show(context);
+                  if (go && context.mounted) context.go('/analyzing');
+                }),
+                const SizedBox(height: 20),
+                // Stats
+                Row(
+                  children: [
+                    Expanded(
+                        child: _StatCard(
+                            n: '${history.length}', label: 'Reviewed')),
+                    const SizedBox(width: 10),
+                    Expanded(
+                        child: _StatCard(
+                            n: '$totalRed',
+                            label: 'Red flags',
+                            color: t.red)),
+                    const SizedBox(width: 10),
+                    Expanded(
+                        child: _StatCard(
+                            n: '$totalAmber',
+                            label: 'Watch-outs',
+                            color: t.amber)),
+                  ],
+                ),
+                const SizedBox(height: 28),
+                // Recent header
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(
+                      'Recent',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: t.ink,
+                      ),
+                    ),
+                    const Spacer(),
+                    InkWell(
+                      onTap: () => context.go('/history'),
+                      child: Text(
+                        'See all',
                         style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.6,
-                          color: t.ink,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: t.accent,
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                _AvatarBtn(onTap: () => context.go('/settings')),
-              ],
-            ),
-            const SizedBox(height: 24),
-            // Hero CTA
-            _HeroCard(onTap: () async {
-              final go = await UploadSheet.show(context);
-              if (go && context.mounted) context.go('/analyzing');
-            }),
-            const SizedBox(height: 20),
-            // Stats
-            Row(
-              children: [
-                Expanded(child: _StatCard(n: '12', label: 'Reviewed')),
-                const SizedBox(width: 10),
-                Expanded(child: _StatCard(n: '3', label: 'Red flags', color: t.red)),
-                const SizedBox(width: 10),
-                Expanded(child: _StatCard(n: '9', label: 'Watch-outs', color: t.amber)),
-              ],
-            ),
-            const SizedBox(height: 28),
-            // Recent header
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Text(
-                  'Recent',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    color: t.ink,
-                  ),
-                ),
-                const Spacer(),
-                InkWell(
-                  onTap: () => context.go('/history'),
-                  child: Text(
-                    'See all',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: t.accent,
                     ),
-                  ),
+                  ],
                 ),
+                const SizedBox(height: 12),
+                if (recents.isEmpty &&
+                    snap.connectionState == ConnectionState.done)
+                  Text(
+                    'No contracts analyzed yet.',
+                    style: TextStyle(fontSize: 14, color: t.muted),
+                  )
+                else
+                  ...recents.map((entry) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: RecentRow(
+                          r: Recent(
+                            id: entry.id,
+                            name: entry.fileName,
+                            when: entry.when,
+                            red: entry.red,
+                            amber: entry.amber,
+                            blue: entry.blue,
+                          ),
+                          onTap: () {
+                            context
+                                .read<AnalysisController>()
+                                .loadEntry(entry);
+                            context.go('/results');
+                          },
+                        ),
+                      )),
               ],
             ),
-            const SizedBox(height: 12),
-            ...mockRecents.map((r) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: RecentRow(r: r, onTap: () => context.go('/results')),
-                )),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

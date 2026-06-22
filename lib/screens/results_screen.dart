@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/analysis_controller.dart';
-import '../data/mock_issues.dart';
 import '../models/issue.dart';
 import '../theme/theme_controller.dart';
 import '../theme/tokens.dart';
@@ -25,21 +24,16 @@ class _ResultsScreenState extends State<ResultsScreen> {
     final t = Tokens.of(context);
     final sevStyle = context.watch<ThemeController>().sevStyle;
     final ctrl = context.watch<AnalysisController>();
-    final allIssues =
-        ctrl.status == AnalysisStatus.done ? ctrl.issues : mockIssues;
+    final allIssues = ctrl.issues;
     final filtered = _filter == null
         ? allIssues
         : allIssues.where((i) => i.sev == _filter).toList();
     final cntR = allIssues.where((i) => i.sev == SevKind.red).length;
     final cntA = allIssues.where((i) => i.sev == SevKind.amber).length;
     final cntB = allIssues.where((i) => i.sev == SevKind.blue).length;
-    final summary = ctrl.status == AnalysisStatus.done
-        ? ctrl.summary
-        : 'Mostly fair, with 3 things to push back on. The auto-renewal and repair threshold stand out — both negotiable.';
-    final docName = ctrl.status == AnalysisStatus.done
-        ? ctrl.fileName
-        : 'Apartment lease — 235 Bowery';
-    final secs = ctrl.status == AnalysisStatus.done ? ctrl.durationSecs : 18;
+    final summary = ctrl.summary;
+    final docName = ctrl.fileName;
+    final secs = ctrl.durationSecs;
 
     return Column(
       children: [

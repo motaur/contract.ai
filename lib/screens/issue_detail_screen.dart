@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/analysis_controller.dart';
-import '../data/mock_issues.dart';
 import '../theme/theme_controller.dart';
 import '../theme/tokens.dart';
 import '../widgets/app_icons.dart';
@@ -18,8 +17,7 @@ class IssueDetailScreen extends StatelessWidget {
     final t = Tokens.of(context);
     final sevStyle = context.watch<ThemeController>().sevStyle;
     final ctrl = context.watch<AnalysisController>();
-    final issueList =
-        ctrl.status == AnalysisStatus.done ? ctrl.issues : mockIssues;
+    final issueList = ctrl.issues;
     final issue = issueList.firstWhere(
       (i) => i.id == issueId,
       orElse: () => issueList.first,

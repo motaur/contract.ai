@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 
+import '../models/history_entry.dart';
 import '../models/issue.dart';
 import '../services/gemini_service.dart';
+import '../services/prefs.dart';
 
 enum AnalysisStatus { idle, analyzing, done, error }
 
@@ -60,10 +62,31 @@ class AnalysisController extends ChangeNotifier {
       _summary = result.summary;
       _issues = result.issues;
       _status = AnalysisStatus.done;
+      await Prefs.saveEntry(HistoryEntry(
+        id: '${start.millisecondsSinceEpoch}',
+        fileName: _fileName,
+        analyzedAt: start,
+        summary: _summary,
+        issues: _issues,
+        durationSecs: _durationSecs,
+      ));
     } catch (e) {
       _error = e.toString();
       _status = AnalysisStatus.error;
     }
+    notifyListeners();
+  }
+
+  void loadEntry(HistoryEntry entry) {
+    _fileBytes = null;
+    _fileName = entry.fileName;
+    _mimeType = '';
+    _modelId = '';
+    _summary = entry.summary;
+    _issues = entry.issues;
+    _durationSecs = entry.durationSecs;
+    _status = AnalysisStatus.done;
+    _error = '';
     notifyListeners();
   }
 
