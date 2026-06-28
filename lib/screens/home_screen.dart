@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/analysis_controller.dart';
@@ -52,11 +53,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Tuesday · May 19',
-                              style: TextStyle(fontSize: 14, color: t.muted)),
+                          Text(
+                              DateFormat('EEEE · MMM d').format(DateTime.now()),
+                              style: TextStyle(fontSize: 14, color: t.muted),
+                            ),
                           const SizedBox(height: 2),
                           Text(
-                            'Hi, Sarah',
+                            'Hi there',
                             style: TextStyle(
                               fontSize: 26,
                               fontWeight: FontWeight.w700,
